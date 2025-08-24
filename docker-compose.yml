@@ -1,0 +1,26 @@
+services:       # ← ここから複数のサービス（コンテナ）を定義
+  db:           # ← 1つ目のサービス名（ここではPostgreSQL）
+    image: postgres:15  # 使うDockerイメージ
+    environment:        # 環境変数（DBのユーザー名やパスワードなど）
+      POSTGRES_USER: ${POSTGRES_USER:-user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-app_db}
+    volumes:            # データの永続化（コンテナが消えてもDBデータが残る）
+      - db_data:/var/lib/postgresql/data   # 「このサービス（db）が、どのボリュームをどこにマウント（接続）するか」
+    ports:              # ホストとコンテナのポートの対応
+      - "5432:5432"
+
+  app:                  # 2つ目のサービス名（ここではFastAPIアプリ）
+    build: ./app            # Dockerfileからビルドする
+    command: uvicorn main:myapp --host 0.0.0.0 --port 8000  # 起動コマンド(一旦こういうものとして理解)
+    volumes:            # ソースコードをコンテナにマウント
+      - .:/workspace
+    environment:        # アプリ用の環境変数（DB接続情報など）
+      - DATABASE_URL=postgresql://${DATABASE_URL}
+    ports:              # ホストとコンテナのポートの対応
+      - "8000:8000"
+    depends_on:         # dbサービスが先に起動するように依存関係を指定
+      - db
+
+volumes:                # ボリューム（データの保存場所）の定義
+  db_data:

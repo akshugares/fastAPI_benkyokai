@@ -1,0 +1,791 @@
+openapi: 3.0.0
+info:
+    title: 体重管理API
+    description: ユーザの体重記録を管理するためのAPI
+    version: 1.0.0
+
+servers:
+    - url: http://localhost:8000
+        description: ローカル開発環境
+
+components:
+    schemas:
+        Error:
+            type: object
+            properties:
+                detail:
+                    type: string
+                    description: エラーメッセージ
+    securitySchemes:
+        BearerAuth:
+            type: http
+            scheme: bearer
+            bearerFormat: JWT
+            description: JWT認証トークン
+
+paths:
+    /api/auth/register:
+        post:
+            summary: 新規アカウント作成
+            description: ユーザ名・メールアドレス・パスワードでアカウントを新規作成。
+            tags: account
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - name
+                                - email
+                                - password
+                            properties:
+                                name:
+                                    type: string
+                                    description: ユーザ名
+                                    minLength: 1
+                                    maxLength: 64
+                                email:
+                                    type: string
+                                    description: メールアドレス
+                                    format: email
+                                    minLength: 1
+                                    maxLength: 128
+                                password:
+                                    type: string
+                                    description: パスワード(8文字以上128文字以内)
+                                    minLength: 8
+                                    maxLength: 128
+                                    format: password
+            responses:
+                '201':
+                    description: 新規アカウント作成に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        description: ユーザID
+                                    name:
+                                        type: string
+                                        description: ユーザ名
+                                    email:
+                                        type: string
+                                        description: メールアドレス
+                                    created_at:
+                                        type: string
+                                        description: 作成日時
+                '409':
+                    description: メールアドレスが既に使用されている
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':   # swaggerでは一旦これ。実装時にバリデーションエラー用のスキーマにする。
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/auth/login:
+        post:
+            summary: ログイン
+            description: メールアドレス・パスワードでログイン。認証トークンを返す。
+            tags: account
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - email
+                                - password
+                            properties:
+                                email:
+                                    type: string
+                                    description: メールアドレス
+                                    format: email
+                                    minLength: 1
+                                    maxLength: 128
+                                password:
+                                    type: string
+                                    description: パスワード(8文字以上128文字以内)
+                                    minLength: 8
+                                    maxLength: 128
+                                    format: password
+            responses:
+                '200':
+                    'description': ログインに成功
+                    'content':
+                        'application/json':
+                            'schema':
+                                'type': 'object'
+                                'properties':
+                                    'access_token':
+                                        'type': 'string'
+                                        'description': '認証トークン'
+                                    'token_type':
+                                        'type': 'string'
+                                        'description': 'トークンのタイプ'
+                                    'expires_in':
+                                        'type': 'integer'
+                                        'description': 'トークンの有効期限(秒)'
+                                    'refresh_token':
+                                        'type': 'string'
+                                        'description': 'リフレッシュトークン'
+                '401':
+                    'description': '認証エラー'
+                    'content':
+                        'application/json':
+                            'schema':
+                                '$ref': '#/components/schemas/Error'
+                '422':
+                    'description': 'バリデーションエラー'
+                    'content':
+                        'application/json':
+                            'schema':
+                                '$ref': '#/components/schemas/Error'
+                '500':
+                    'description': 'サーバエラー'
+                    'content':
+                        'application/json':
+                            'schema':
+                                '$ref': '#/components/schemas/Error'
+    /api/auth/logout:
+        post:
+            summary: ログアウト
+            description: ログアウトに成功すると、認証トークンとリフレッシュトークンが無効になる。
+            tags: account
+            security:
+                - BearerAuth: []   # BearerAuth(JWT認証)が必要
+            # requestBody: ログアウトはリクエストボディが必須ではない
+            responses:
+                '204':
+                    'description': 'ログアウトに成功'
+                '401':
+                    'description': '認証エラー'   # 500にまとめる説もある
+                    'content':
+                        'application/json':
+                            'schema':
+                                '$ref': '#/components/schemas/Error'
+                '500':
+                    'description': 'サーバエラー'
+                    'content':
+                        'application/json':
+                            'schema':
+                                '$ref': '#/components/schemas/Error'
+    /api/users/{user_id}:
+        delete:
+            summary: ユーザを削除
+            description: 指定されたユーザIDのユーザを削除する。
+            tags: account
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+            responses:
+                '204':
+                    description: ユーザ削除に成功
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: ユーザが存在しない
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/users/{user_id}/profile:
+        get:
+            summary: ユーザのプロフィールを取得
+            description: 指定されたユーザIDのプロフィール情報(ID、メールアドレス、ユーザ名、目標体重)を取得する。
+            tags: account
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+            responses:
+                '200':
+                    description: プロフィール取得に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:   # FIXME: エンティティの名前は含めない(idなど)
+                                        type: integer
+                                        description: ユーザID
+                                    name:   # FIXME: エンティティの名前は含めない(nameなど)
+                                        type: string
+                                        description: ユーザ名
+                                    email:
+                                        type: string
+                                        format: email
+                                        description: メールアドレス
+                                    target_weight:
+                                        type: number
+                                        description: 目標体重
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: ユーザが存在しない
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        put:
+            summary: ユーザのプロフィールを更新
+            description: 指定されたユーザIDのプロフィール情報(ユーザ名、メールアドレス、目標体重)を更新する。パスワードの変更は別APIで行う。
+            tags: account
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            properties:
+                                name:
+                                    type: string
+                                    description: ユーザ名
+                                    minLength: 1
+                                    maxLength: 64
+                                email:
+                                    type: string
+                                    format: email
+                                    description: メールアドレス
+                                    minLength: 1
+                                    maxLength: 128
+                                target_weight:
+                                    type: number
+                                    description: 目標体重
+                                    minimum: 0
+                                    maximum: 999.99
+            responses:
+                '200':
+                    description: プロフィール更新に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        description: ユーザID
+                                    name:
+                                        type: string
+                                        description: ユーザ名
+                                    email:
+                                        type: string
+                                        format: email
+                                        description: メールアドレス
+                                    target_weight:
+                                        type: number
+                                        description: 目標体重
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: ユーザが存在しない
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/users/{user_id}/password:
+        put:
+            summary: ユーザのパスワードを更新
+            description: 指定されたユーザIDのパスワードを更新する。
+            tags: account
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - current_password
+                                - new_password
+                            properties:
+                                current_password:
+                                    type: string
+                                    description: 現在のパスワード(8文字以上128文字以内)
+                                    minLength: 8
+                                    maxLength: 128
+                                    format: password
+                                new_password:
+                                    type: string
+                                    description: 新しく設定するパスワード(8文字以上128文字以内)
+                                    minLength: 8
+                                    maxLength: 128
+                                    format: password
+            responses:
+                '200':
+                    description: パスワード更新に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        description: ユーザID
+                                    new_password:
+                                        type: string
+                                        description: 新しく設定されたパスワード
+                                        format: password
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: ユーザが存在しない
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/auth/password-resets:
+        post:
+            summary: パスワードリセットのリクエスト
+            description: メールアドレスを入力すると、パスワードリセット用のURLをメールで送信する。
+            tags: account
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - email
+                            properties:
+                                email:
+                                    type: string
+                                    format: email
+                                    description: メールアドレス
+                                    minLength: 1
+                                    maxLength: 128
+            responses:
+                '200':   # 202はバッチ処理の開始のリクエストなどに使う(非同期処理)
+                    description: パスワードリセットのリクエスト受け入れ
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    message:
+                                        type: string
+                                        description: パスワードリセット受付メッセージ
+                                        example: パスワードリセット用のURLを指定のメールアドレスに送信しました。
+                '422':
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/auth/password-resets/{reset_token}:
+        put:
+            summary: パスワードリセットの実行
+            description: 指定されたパスワードリセットトークンに対応するユーザのパスワードを更新する。
+            tags: account
+            parameters:
+                - name: reset_token
+                  in: path
+                  required: true
+                  schema:
+                      type: string
+                  description: パスワードリセットトークン
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - new_password
+                            properties:
+                                new_password:
+                                    type: string
+                                    description: 新しく設定するパスワード(8文字以上128文字以内)
+                                    minLength: 8
+                                    maxLength: 128
+                                    format: password
+            responses:
+                '200':
+                    description: パスワードリセットに成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:
+                                        type: integer
+                                        description: ユーザID
+                                    new_password:
+                                        type: string
+                                        description: 新しく設定されたパスワード
+                                        format: password
+                '400':
+                    description: パスワードリセットトークンが無効・期限切れ
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/users/{user_id}/records:
+        post:
+            summary: 新規体重記録を作成
+            description: 指定されたユーザIDの体重記録を作成する。
+            tags: record
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - record_date
+                                - weight
+                            properties:
+                                record_date:
+                                    type: string
+                                    format: date
+                                    pattern: '^\d{4}-\d{2}-\d{2}$'
+                                    description: 体重記録日
+                                    example: 2025-01-15
+                                weight:
+                                    type: number
+                                    description: 体重
+                                    minimum: 0
+                                    maximum: 999.99
+            responses:
+                '201':
+                    description: 体重記録作成に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    id:   # FIXME: エンティティの名前は含めない(idなど)
+                                        type: integer
+                                        description: 体重記録ID
+                                    user_id:
+                                        type: integer
+                                        description: ユーザID
+                                    record_date:
+                                        type: string
+                                        format: date
+                                        description: 体重記録日
+                                    weight:
+                                        type: number
+                                        description: 体重
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '409':
+                    description: 体重記録が既に存在する
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        get:
+            summary: 体重記録一覧を取得
+            description: 指定されたユーザIDの体重記録一覧を取得する。
+            tags: record
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+            responses:
+                '200':
+                    description: 体重記録一覧取得に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    user_id:   # id ?
+                                        type: integer
+                                        description: ユーザID
+                                    records:
+                                        type: array
+                                        description: 体重記録一覧
+                                        items:
+                                            type: object
+                                            properties:
+                                                record_id:   # id ?
+                                                    type: integer
+                                                    description: 体重記録ID
+                                                record_date:
+                                                    type: string
+                                                    format: date
+                                                    description: 体重記録日
+                                                weight:
+                                                    type: number
+                                                    description: 体重
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+    /api/users/{user_id}/records/{record_id}:
+        put:
+            summary: 体重記録を更新
+            description: 指定されたユーザID・体重記録IDの体重記録を更新する。
+            tags: record
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: ユーザID
+                - name: record_id
+                  in: path
+                  required: true
+                  schema:
+                      type: integer
+                  description: 体重記録ID
+            requestBody:
+                required: true
+                content:
+                    application/json:
+                        schema:
+                            type: object
+                            required:
+                                - record_date
+                                - weight
+                            properties:
+                                record_date:
+                                    type: string
+                                    format: date
+                                    pattern: '^\d{4}-\d{2}-\d{2}$'
+                                    description: 体重記録日
+                                    example: 2025-01-15
+                                weight:
+                                    type: number
+                                    description: 体重
+                                    minimum: 0
+                                    maximum: 999.99
+            responses:
+                '200':
+                    description: 体重記録更新に成功
+                    content:
+                        application/json:
+                            schema:
+                                type: object
+                                properties:
+                                    user_id:   # id ?
+                                        type: integer
+                                        description: ユーザID
+                                    record_id:   # id ?
+                                        type: integer
+                                        description: 体重記録ID
+                                    record_date:
+                                        type: string
+                                        format: date
+                                        description: 体重記録日
+                                    weight:
+                                        type: number
+                                        description: 体重
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: リソースが存在しない
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '422':
+                    description: バリデーションエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+        delete:
+            summary: 体重記録を削除
+            description: 指定されたユーザID・体重記録IDの体重記録を削除する。
+            tags: record
+            security:
+                - BearerAuth: []
+            parameters:
+                - name: user_id
+                    in: path
+                    required: true
+                    schema:
+                        type: integer
+                    description: ユーザID
+                - name: record_id
+                    in: path
+                    required: true
+                    schema:
+                        type: integer
+                    description: 体重記録ID
+            responses:
+                '204':
+                    description: 体重記録削除に成功
+                '401':
+                    description: 認証エラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '404':
+                    description: リソースが存在しない
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
+                '500':
+                    description: サーバーエラー
+                    content:
+                        application/json:
+                            schema:
+                                $ref: '#/components/schemas/Error'
