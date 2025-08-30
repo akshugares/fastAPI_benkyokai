@@ -74,9 +74,18 @@ paths:
                                     email:
                                         type: string
                                         description: メールアドレス
-                                    created_at:
+                                    password:
                                         type: string
+                                        description: パスワード
+                                    target_weight:
+                                        type: number
+                                        description: 目標体重
+                                    created_at:
+                                        type: date-time
                                         description: 作成日時
+                                    updated_at:
+                                        type: date-time
+                                        description: 更新日時
                 '409':
                     description: メールアドレスが既に使用されている
                     content:
@@ -130,18 +139,27 @@ paths:
                             'schema':
                                 'type': 'object'
                                 'properties':
+                                    'id':
+                                        'type': 'integer'
+                                        'description': 'トークンID'
+                                    'user_id':
+                                        'type': 'integer'
+                                        'description': 'ユーザID'
                                     'access_token':
                                         'type': 'string'
-                                        'description': '認証トークン'
-                                    'token_type':
-                                        'type': 'string'
-                                        'description': 'トークンのタイプ'
-                                    'expires_in':
-                                        'type': 'integer'
-                                        'description': 'トークンの有効期限(秒)'
+                                        'description': 'アクセストークン'
                                     'refresh_token':
                                         'type': 'string'
                                         'description': 'リフレッシュトークン'
+                                    'created_at':
+                                        'type': 'date-time'
+                                        'description': '作成日時'
+                                    'access_token_expires_in':
+                                        'type': 'integer'
+                                        'description': 'アクセストークンの有効期限(秒)'
+                                    'refresh_token_expires_in':
+                                        'type': 'integer'
+                                        'description': 'リフレッシュトークンの有効期限(秒)'
                 '401':
                     'description': '認証エラー'
                     'content':
@@ -240,10 +258,7 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    id:   # FIXME: エンティティの名前は含めない(idなど)
-                                        type: integer
-                                        description: ユーザID
-                                    name:   # FIXME: エンティティの名前は含めない(nameなど)
+                                    name:
                                         type: string
                                         description: ユーザ名
                                     email:
@@ -315,9 +330,6 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    id:
-                                        type: integer
-                                        description: ユーザID
                                     name:
                                         type: string
                                         description: ユーザ名
@@ -328,6 +340,9 @@ paths:
                                     target_weight:
                                         type: number
                                         description: 目標体重
+                                    updated_at:
+                                        type: date-time
+                                        description: 更新日時
                 '401':
                     description: 認証エラー
                     content:
@@ -396,9 +411,6 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    id:
-                                        type: integer
-                                        description: ユーザID
                                     new_password:
                                         type: string
                                         description: 新しく設定されたパスワード
@@ -506,9 +518,6 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    id:
-                                        type: integer
-                                        description: ユーザID
                                     new_password:
                                         type: string
                                         description: 新しく設定されたパスワード
@@ -574,7 +583,7 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    id:   # FIXME: エンティティの名前は含めない(idなど)
+                                    id:
                                         type: integer
                                         description: 体重記録ID
                                     user_id:
@@ -582,11 +591,16 @@ paths:
                                         description: ユーザID
                                     record_date:
                                         type: string
-                                        format: date
                                         description: 体重記録日
                                     weight:
                                         type: number
                                         description: 体重
+                                    created_at:
+                                        type: date-time
+                                        description: 作成日時
+                                    updated_at:
+                                        type: date-time
+                                        description: 更新日時
                 '401':
                     description: 認証エラー
                     content:
@@ -632,16 +646,13 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    user_id:   # id ?
-                                        type: integer
-                                        description: ユーザID
                                     records:
                                         type: array
                                         description: 体重記録一覧
                                         items:
                                             type: object
                                             properties:
-                                                record_id:   # id ?
+                                                id:
                                                     type: integer
                                                     description: 体重記録ID
                                                 record_date:
@@ -712,12 +723,6 @@ paths:
                             schema:
                                 type: object
                                 properties:
-                                    user_id:   # id ?
-                                        type: integer
-                                        description: ユーザID
-                                    record_id:   # id ?
-                                        type: integer
-                                        description: 体重記録ID
                                     record_date:
                                         type: string
                                         format: date
@@ -725,6 +730,9 @@ paths:
                                     weight:
                                         type: number
                                         description: 体重
+                                    updated_at:
+                                        type: string
+                                        description: 更新日時
                 '401':
                     description: 認証エラー
                     content:
