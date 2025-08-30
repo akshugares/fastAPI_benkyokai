@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, Date, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Index
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -8,10 +8,17 @@ class PasswordResetToken(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    reset_token = Column(String(255), nullable=False)
+    reset_token = Column(String(255), nullable=False, unique=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    expires_in = Column(Integer, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
     used_at = Column(DateTime(timezone=True), nullable=True)
+    is_used = Column(Boolean, default=False, nullable=False)
+
+    # インデックス定義
+    __table_args__ = (
+        Index('idx_password_reset_token', 'reset_token'),
+        Index('idx_password_reset_user', 'user_id'),
+    )
 
     user = relationship("User", back_populates="password_reset_tokens")
 

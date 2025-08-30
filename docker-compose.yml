@@ -17,6 +17,7 @@ services:       # ← ここから複数のサービス（コンテナ）を定�
       - .:/workspace
     environment:        # アプリ用の環境変数（DB接続情報など）
       - DATABASE_URL=${DATABASE_URL}
+      - PYTHONPATH=/workspace
     ports:              # ホストとコンテナのポートの対応
       - "8000:8000"
     depends_on:         # dbサービスが先に起動するように依存関係を指定

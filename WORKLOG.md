@@ -267,3 +267,21 @@ API設計を行う。
 - API設計
     - auth_tokenのテーブル設計の見直し
 - バックエンド実装
+
+## 第9回：バックエンド実装(続き)
+
+### 概要:
+- データベースマイグレーション実装
+- Alembic設定とテーブル作成
+
+### 作業ログ
+- データベースモデル
+    - Decimal → Numeric への統一
+- Alembicによるマイグレーション
+    - users, weight_records, auth_tokens, password_reset_tokensの4テーブル作成完了
+
+### TODO:
+- ユーザー管理API実装（CRUD + エンドポイント）
+- 認証機能の実装（JWT認証）
+- 体重記録API実装（CRUD + エンドポイント）
+- APIテストとSwagger UIでの動作確認
